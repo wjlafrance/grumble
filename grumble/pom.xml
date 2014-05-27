@@ -92,7 +92,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib</classpathPrefix>
-							<mainClass>net.wjlafrance.grumble.HelloWorld</mainClass>
+							<mainClass>net.wjlafrance.grumble.GrumbleBot</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

@@ -10,7 +10,10 @@ import java.security.NoSuchAlgorithmException;
 import javax.net.SocketFactory;
 
 import MumbleProto.Mumble;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import lombok.RequiredArgsConstructor;
 
 	/*
@@ -45,35 +48,7 @@ import lombok.RequiredArgsConstructor;
 public @RequiredArgsConstructor class MurmurThread extends Thread {
 
 	public static interface MessageCallback {
-		void receivedMessage(MessageType type, GeneratedMessage message);
-	}
-
-	public enum MessageType {
-		Version,
-		UDPTunnel,
-		Authenticate,
-		Ping,
-		Reject,
-		ServerSync,
-		ChannelRemove,
-		ChannelState,
-		UserRemove,
-		UserState,
-		BanList,
-		TextMessage,
-		PermissionDenied,
-		ACL,
-		QueryUsers,
-		CryptSetup,
-		ContextActionAdd,
-		ContextAction,
-		UserList,
-		VoiceTarget,
-		PermissionQuery,
-		CodecVersion,
-		UserStats,
-		RequestBlob,
-		ServerConfig
+		void receivedMessage(Message message);
 	}
 
 	private enum State {
@@ -92,7 +67,7 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 	private Thread pingThread = new Thread(() -> {
 		while (connectionState == State.Connected) {
 			try {
-				sendMessage(MessageType.Ping, Mumble.Ping.newBuilder().build());
+				sendMessage(Mumble.Ping.newBuilder().build());
 				System.out.println("Sent ping.");
 			} catch (IOException ex) {
 				ex.printStackTrace();
@@ -110,8 +85,8 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
 
-	private void sendMessage(MessageType type, GeneratedMessage message) throws IOException {
-		outputStream.writeShort(type.ordinal());
+	private void sendMessage(GeneratedMessage message) throws IOException {
+		outputStream.writeShort(message.getDescriptorForType().getIndex());
 		outputStream.writeInt(message.getSerializedSize());
 		message.writeTo(outputStream);
 	}
@@ -127,31 +102,39 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 			throw new IOException("Didn't read expected amount of bytes.");
 		}
 
-		// this is terrible
-		if (MessageType.Version.ordinal() == type) {
-			callback.receivedMessage(MessageType.Version, Mumble.Version.parseFrom(data));
-		} else if (MessageType.UDPTunnel.ordinal() == type) {
-			callback.receivedMessage(MessageType.UDPTunnel, Mumble.UDPTunnel.parseFrom(data));
-		} else if (MessageType.Ping.ordinal() == type) {
-			callback.receivedMessage(MessageType.Ping, Mumble.Ping.parseFrom(data));
-		} else if (MessageType.ServerSync.ordinal() == type) {
-			callback.receivedMessage(MessageType.ServerSync, Mumble.ServerSync.parseFrom(data));
-		} else if (MessageType.ChannelState.ordinal() == type) {
-			callback.receivedMessage(MessageType.ChannelState, Mumble.ChannelState.parseFrom(data));
-		} else if (MessageType.UserState.ordinal() == type) {
-			callback.receivedMessage(MessageType.UserState, Mumble.UserState.parseFrom(data));
-		} else if (MessageType.ACL.ordinal() == type) {
-			callback.receivedMessage(MessageType.ACL, Mumble.ACL.parseFrom(data));
-		} else if (MessageType.CryptSetup.ordinal() == type) {
-			callback.receivedMessage(MessageType.CryptSetup, Mumble.CryptSetup.parseFrom(data));
-		} else if (MessageType.PermissionQuery.ordinal() == type) {
-			callback.receivedMessage(MessageType.PermissionQuery, Mumble.PermissionQuery.parseFrom(data));
-		} else if (MessageType.CodecVersion.ordinal() == type) {
-			callback.receivedMessage(MessageType.CodecVersion, Mumble.CodecVersion.parseFrom(data));
-		} else if (MessageType.ServerConfig.ordinal() == type) {
-			callback.receivedMessage(MessageType.ServerConfig, Mumble.ServerConfig.parseFrom(data));
-		} else {
-			System.out.format("Unexpected message type received: %d\n", type);
+		ImmutableList<Message> messageTypes = ImmutableList.of(
+			Mumble.Version.newBuilder().getDefaultInstanceForType(),
+			Mumble.UDPTunnel.newBuilder().getDefaultInstanceForType(),
+			Mumble.Authenticate.newBuilder().getDefaultInstanceForType(),
+			Mumble.Ping.newBuilder().getDefaultInstanceForType(),
+			Mumble.Reject.newBuilder().getDefaultInstanceForType(),
+			Mumble.ServerSync.newBuilder().getDefaultInstanceForType(),
+			Mumble.ChannelRemove.newBuilder().getDefaultInstanceForType(),
+			Mumble.ChannelState.newBuilder().getDefaultInstanceForType(),
+			Mumble.UserRemove.newBuilder().getDefaultInstanceForType(),
+			Mumble.UserState.newBuilder().getDefaultInstanceForType(),
+			Mumble.BanList.newBuilder().getDefaultInstanceForType(),
+			Mumble.TextMessage.newBuilder().getDefaultInstanceForType(),
+			Mumble.PermissionDenied.newBuilder().getDefaultInstanceForType(),
+			Mumble.ACL.newBuilder().getDefaultInstanceForType(),
+			Mumble.QueryUsers.newBuilder().getDefaultInstanceForType(),
+			Mumble.CryptSetup.newBuilder().getDefaultInstanceForType(),
+			Mumble.ContextActionModify.newBuilder().getDefaultInstanceForType(),
+			Mumble.ContextAction.newBuilder().getDefaultInstanceForType(),
+			Mumble.UserList.newBuilder().getDefaultInstanceForType(),
+			Mumble.VoiceTarget.newBuilder().getDefaultInstanceForType(),
+			Mumble.PermissionQuery.newBuilder().getDefaultInstanceForType(),
+			Mumble.CodecVersion.newBuilder().getDefaultInstanceForType(),
+			Mumble.UserStats.newBuilder().getDefaultInstanceForType(),
+			Mumble.RequestBlob.newBuilder().getDefaultInstanceForType(),
+			Mumble.ServerConfig.newBuilder().getDefaultInstanceForType()
+		);
+
+		try {
+			Message message = messageTypes.get(type).getParserForType().parseFrom(data);
+			callback.receivedMessage(message);
+		} catch (InvalidProtocolBufferException ex) {
+			ex.printStackTrace();
 		}
 	}
 
@@ -163,9 +146,9 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 				this.inputStream = new DataInputStream(socket.getInputStream());
 				this.outputStream = new DataOutputStream(socket.getOutputStream());
 
-				sendMessage(MessageType.Version, Mumble.Version.newBuilder().setVersion(1).setRelease("Grumble 1.0.0-SNAPSHOT").build());
+				sendMessage(Mumble.Version.newBuilder().setVersion(1).setRelease("Grumble 1.0.0-SNAPSHOT").build());
 
-				sendMessage(MessageType.Authenticate, Mumble.Authenticate.newBuilder().setUsername(this.username).build());
+				sendMessage(Mumble.Authenticate.newBuilder().setUsername(this.username).build());
 
 				this.connectionState = State.Connected;
 				pingThread.start();

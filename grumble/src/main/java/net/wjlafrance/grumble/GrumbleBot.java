@@ -1,12 +1,18 @@
 package net.wjlafrance.grumble;
 
-import MumbleProto.Mumble.Version;
-import MumbleProto.Mumble.CodecVersion;
-import MumbleProto.Mumble.UserState;
+import net.wjlafrance.grumble.data.Channel;
+import net.wjlafrance.grumble.data.ChannelList;
+import net.wjlafrance.grumble.data.User;
+import net.wjlafrance.grumble.data.UserList;
+import net.wjlafrance.grumble.net.MurmurThread;
+
 import MumbleProto.Mumble.ChannelState;
+import MumbleProto.Mumble.CodecVersion;
 import MumbleProto.Mumble.Ping;
-import MumbleProto.Mumble.TextMessage;
 import MumbleProto.Mumble.ServerSync;
+import MumbleProto.Mumble.TextMessage;
+import MumbleProto.Mumble.UserState;
+import MumbleProto.Mumble.Version;
 import lombok.extern.slf4j.Slf4j;
 
 public @Slf4j class GrumbleBot {
@@ -15,31 +21,31 @@ public @Slf4j class GrumbleBot {
 	private static final int PORT = 64738;
 	private static final String USERNAME = "GrumbleBot";
 
-	private final MurmurThread connection;
+	private final MurmurThread connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
+		if (message instanceof Version) {
+			onVersion((Version) message);
+		} else if (message instanceof CodecVersion) {
+			onCodecVersion((CodecVersion) message);
+		} else if (message instanceof ChannelState) {
+			onChannelState((ChannelState) message);
+		} else if (message instanceof UserState) {
+			onUserState((UserState) message);
+		} else if (message instanceof Ping) {
+			onPing((Ping) message);
+		} else if (message instanceof TextMessage) {
+			onTextMessage((TextMessage) message);
+		} else if (message instanceof ServerSync) {
+			onServerSync((ServerSync) message);
+		} else {
+			log.warn("Received unexpected message from server: {}", message.getClass());
+		}
+	});
 
 	private final UserList userList = new UserList();
+	private final ChannelList channelList = new ChannelList();
 
 	public GrumbleBot() {
-		this.connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
-			if (message instanceof Version) {
-				onVersion((Version) message);
-			} else if (message instanceof CodecVersion) {
-				onCodecVersion((CodecVersion) message);
-			} else if (message instanceof ChannelState) {
-				onChannelState((ChannelState) message);
-			} else if (message instanceof UserState) {
-				onUserState((UserState) message);
-			} else if (message instanceof Ping) {
-				onPing((Ping) message);
-			} else if (message instanceof TextMessage) {
-				onTextMessage((TextMessage) message);
-			} else if (message instanceof ServerSync) {
-				onServerSync((ServerSync) message);
-			} else {
-				log.warn("Received unexpected message from server: {}", message.getClass());
-			}
-		});
-		connection.start();
+		this.connection.start();
 	}
 
 	private void onVersion(Version message) {
@@ -52,25 +58,26 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onCodecVersion(CodecVersion message) {
-		int alpha = message.getAlpha();
-		int beta = message.getBeta();
-		String alphaString = String.format("%d.%d.%d", alpha >> 16 & 0xFFFF, alpha >> 8 & 0xFF, alpha & 0xFF);
-		String betaString = String.format("%d.%d.%d", beta >> 16 & 0xFFFF, beta >> 8 & 0xFF, beta & 0xFF);
-
-		log.info("CodecVersion: alpha: {}, beta: {}, prefer alpha: {}", alphaString, betaString,
+		log.info("CodecVersion: alpha: {}, beta: {}, prefer alpha: {}", message.getAlpha(), message.getBeta(),
 				message.getPreferAlpha() ? "true" : "false");
 	}
 
 	private void onChannelState(ChannelState message) {
-		Channel channel = new Channel();
-		channel.setId(message.getChannelId());
-		channel.setParentId(message.getParent());
-		channel.setName(message.getName());
-		channel.setDescription(message.getDescription());
-		channel.setTemporary(message.getTemporary());
-		channel.setPosition(message.getPosition());
+		Channel channel = channelList.getChannelForId(message.getChannelId());
+		if (message.hasParent()) {
+			channel.setParentId(message.getParent());
+		}
+		if (message.hasName()) {
+			channel.setName(message.getName());
+		}
+		if (message.hasTemporary()) {
+			channel.setTemporary(message.getTemporary());
+		}
+		if (message.hasPosition()) {
+			channel.setPosition(message.getPosition());
+		}
 
-		log.info("Channel state: {}", channel.toString());
+		log.info("Channel state: {}", channel);
 	}
 
 	private void onUserState(UserState message) {
@@ -85,7 +92,7 @@ public @Slf4j class GrumbleBot {
 			user.setChannelId(message.getChannelId());
 		}
 
-		log.info("User state: {}", user.toString());
+		log.info("User state: {}", user);
 	}
 
 	private void onPing(Ping message) {

@@ -1,4 +1,4 @@
-package net.wjlafrance.grumble;
+package net.wjlafrance.grumble.data;
 
 import lombok.Data;
 

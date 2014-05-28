@@ -1,4 +1,4 @@
-package net.wjlafrance.grumble;
+package net.wjlafrance.grumble.net;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

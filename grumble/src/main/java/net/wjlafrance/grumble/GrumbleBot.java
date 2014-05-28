@@ -38,8 +38,12 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onVersion(Version message) {
-		log.info("Server version: {}, release: {}, OS: {}, OS version: {}", message.getVersion(),
-				message.getRelease(), message.getOs(), message.getOsVersion());
+		int serverVersion = message.getVersion();
+		String serverVersionString = String.format("%d.%d.%d", serverVersion >> 16 & 0xFFFF, serverVersion >> 8 & 0xFF,
+				serverVersion & 0xFF);
+
+		log.info("Server version: {} (release: {}), OS: {} {}", serverVersionString, message.getRelease(),
+				message.getOs(), message.getOsVersion());
 	}
 
 	private void onChannelState(ChannelState message) {

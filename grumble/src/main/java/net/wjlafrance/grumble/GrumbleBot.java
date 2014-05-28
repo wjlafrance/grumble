@@ -1,6 +1,7 @@
 package net.wjlafrance.grumble;
 
 import MumbleProto.Mumble.Version;
+import MumbleProto.Mumble.CodecVersion;
 import MumbleProto.Mumble.UserState;
 import MumbleProto.Mumble.ChannelState;
 import MumbleProto.Mumble.Ping;
@@ -20,6 +21,8 @@ public @Slf4j class GrumbleBot {
 		this.connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
 			if (message instanceof Version) {
 				onVersion((Version) message);
+			} else if (message instanceof CodecVersion) {
+				onCodecVersion((CodecVersion) message);
 			} else if (message instanceof ChannelState) {
 				onChannelState((ChannelState) message);
 			} else if (message instanceof UserState) {
@@ -44,6 +47,16 @@ public @Slf4j class GrumbleBot {
 
 		log.info("Server version: {} (release: {}), OS: {} {}", serverVersionString, message.getRelease(),
 				message.getOs(), message.getOsVersion());
+	}
+
+	private void onCodecVersion(CodecVersion message) {
+		int alpha = message.getAlpha();
+		int beta = message.getBeta();
+		String alphaString = String.format("%d.%d.%d", alpha >> 16 & 0xFFFF, alpha >> 8 & 0xFF, alpha & 0xFF);
+		String betaString = String.format("%d.%d.%d", beta >> 16 & 0xFFFF, beta >> 8 & 0xFF, beta & 0xFF);
+
+		log.info("CodecVersion: alpha: {}, beta: {}, prefer alpha: {}", alphaString, betaString,
+				message.getPreferAlpha() ? "true" : "false");
 	}
 
 	private void onChannelState(ChannelState message) {

@@ -1,9 +1,13 @@
 package net.wjlafrance.grumble;
 
+import java.io.IOException;
+
 import MumbleProto.Mumble.Version;
 import MumbleProto.Mumble.UserState;
+import MumbleProto.Mumble.ChannelState;
 import MumbleProto.Mumble.Ping;
 import MumbleProto.Mumble.TextMessage;
+import MumbleProto.Mumble.ServerSync;
 
 public class GrumbleBot {
 
@@ -11,16 +15,22 @@ public class GrumbleBot {
 	private static final int PORT = 64738;
 	private static final String USERNAME = "GrumbleBot";
 
+	private MurmurThread connection;
+
 	public GrumbleBot() {
-		Thread connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
+		connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
 			if (message instanceof Version) {
 				onVersion((Version) message);
+			} else if (message instanceof ChannelState) {
+				onChannelState((ChannelState) message);
 			} else if (message instanceof UserState) {
 				onUserState((UserState) message);
 			} else if (message instanceof Ping) {
 				onPing((Ping) message);
 			} else if (message instanceof TextMessage) {
 				onTextMessage((TextMessage) message);
+			} else if (message instanceof ServerSync) {
+				onServerSync((ServerSync) message);
 			} else {
 				System.out.format("Received unexpected response type! %s\n", message.getClass());
 			}
@@ -34,9 +44,26 @@ public class GrumbleBot {
 				message.getOsVersion());
 	}
 
+	private void onChannelState(ChannelState message) {
+		Channel channel = new Channel();
+		channel.setId(message.getChannelId());
+		channel.setParentId(message.getParent());
+		channel.setName(message.getName());
+		channel.setDescription(message.getDescription());
+		channel.setTemporary(message.getTemporary());
+		channel.setPosition(message.getPosition());
+
+		System.out.format("Channel state: %s\n", channel.toString());
+	}
+
 	private void onUserState(UserState message) {
-		System.out.format("User state: user %s(id %d, actor %d) is in channel %d\n", message.getName(),
-				message.getActor(), message.getUserId(), message.getChannelId());
+		User user = new User();
+		user.setSessionId(message.getSession());
+		user.setId(message.getUserId());
+		user.setName(message.getName());
+		user.setChannelId(message.getChannelId());
+
+		System.out.format("User state: %s\n", user.toString());
 	}
 
 	private void onPing(Ping message) {
@@ -48,6 +75,12 @@ public class GrumbleBot {
 
 	private void onTextMessage(TextMessage message) {
 		System.out.format("TextMessage: [Actor %d]: %s\n", message.getActor(), message.getMessage());
+	}
+
+	private void onServerSync(ServerSync message) {
+		System.out.println("--------------------");
+		System.out.format("%s\n", message.getWelcomeText());
+		System.out.println("--------------------");
 	}
 
 	public static void main(String args[]) {

@@ -85,7 +85,7 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
 
-	private void sendMessage(GeneratedMessage message) throws IOException {
+	public void sendMessage(GeneratedMessage message) throws IOException {
 		outputStream.writeShort(message.getDescriptorForType().getIndex());
 		outputStream.writeInt(message.getSerializedSize());
 		message.writeTo(outputStream);
@@ -131,7 +131,7 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 		);
 
 		if (1 == type) { // UDP packet
-			System.out.format("Received UDP packet (%d bytes)\n", length);
+//			System.out.format("Received UDP packet (%d bytes)\n", length);
 			return;
 		}
 

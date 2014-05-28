@@ -41,6 +41,8 @@ public @Slf4j class GrumbleBot {
 			onTextMessage((TextMessage) message);
 		} else if (message instanceof ServerSync) {
 			onServerSync((ServerSync) message);
+		} else if (message instanceof PermissionDenied) {
+			onPermissionDenied((PermissionDenied) message);
 		} else {
 			log.warn("Received unexpected message from server: {}", message.getClass());
 		}
@@ -77,8 +79,8 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onCodecVersion(CodecVersion message) {
-		log.info("CodecVersion: alpha: {}, beta: {}, prefer alpha: {}", message.getAlpha(), message.getBeta(),
-				message.getPreferAlpha() ? "true" : "false");
+		log.info("CodecVersion: alpha: 0x{}, beta: 0x{}, prefer alpha: {}", Integer.toHexString(message.getAlpha()),
+				Integer.toHexString(message.getBeta()), message.getPreferAlpha() ? "true" : "false");
 	}
 
 	private void onChannelState(ChannelState message) {
@@ -130,6 +132,10 @@ public @Slf4j class GrumbleBot {
 
 	private void onServerSync(ServerSync message) {
 		log.info("Server sync: {}", message.getWelcomeText());
+	}
+
+	private void onPermissionDenied(PermissionDenied message) {
+		log.warn("Permission denied: {}, {}, {}", message.getPermission(), message.getType(), message.getReason());
 	}
 
 	public static void main(String args[]) {

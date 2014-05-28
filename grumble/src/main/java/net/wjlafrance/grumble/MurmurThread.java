@@ -130,6 +130,11 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 			Mumble.ServerConfig.newBuilder().getDefaultInstanceForType()
 		);
 
+		if (1 == type) { // UDP packet
+			System.out.format("Received UDP packet (%d bytes)\n", length);
+			return;
+		}
+
 		try {
 			Message message = messageTypes.get(type).getParserForType().parseFrom(data);
 			callback.receivedMessage(message);

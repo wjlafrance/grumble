@@ -6,8 +6,8 @@ import java.io.InputStream;
 public class NetUtils {
 
 	// https://github.com/mumble-voip/mumble/blob/master/src/PacketDataStream.h
-	public static long readVarint(InputStream inputStream) throws IOException {
-		long ret = inputStream.read();
+	public static int readVarint(InputStream inputStream) throws IOException {
+		int ret = inputStream.read();
 		if ((ret & 0x80) == 0x00) { // 0xxxxxxx
 			return (ret & 0x7F);
 		} else if ((ret & 0xC0) == 0x80) { // 1xxxxxxx
@@ -20,9 +20,9 @@ public class NetUtils {
 			switch ((int) (ret & 0xFC)) { // first 6 bits
 				case 0xF0: // 111100xx - 32bit positive integer
 					return inputStream.read() << 24 | inputStream.read() << 16 | inputStream.read() << 8 | inputStream.read();
-				case 0xF4: // 111101xx - 64bit number
-					return inputStream.read() << 56 | inputStream.read() << 48 | inputStream.read() << 40 | inputStream.read() << 32
-							| inputStream.read() << 24 | inputStream.read() << 16 | inputStream.read() << 8 | inputStream.read();
+//				case 0xF4: // 111101xx - 64bit number
+//					return inputStream.read() << 56 | inputStream.read() << 48 | inputStream.read() << 40 | inputStream.read() << 32
+//							| inputStream.read() << 24 | inputStream.read() << 16 | inputStream.read() << 8 | inputStream.read();
 				case 0xFC: // 111111xx byte-inverted negative two-byte number
 					return ~(ret & 0x03);
 			}

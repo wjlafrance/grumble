@@ -39,6 +39,20 @@ public @Slf4j class GrumbleBot {
 		} else {
 			log.warn("Received unexpected message from server: {}", message.getClass());
 		}
+	}, (packet, session, sequence) -> {
+		switch (packet) {
+			case CELTAlpha:
+				log.debug("Received CELT alpha encoded voice data, session {}, sequence {}", session, sequence);
+				break;
+			case Ping:
+				break;
+			case Speex:
+				log.debug("Received Speex encoded voice data, session {}, sequence {}", session, sequence);
+				break;
+			case CELTBeta:
+				log.debug("Received CELT beta encoded voice data, session {}, sequence {}", session, sequence);
+				break;
+		}
 	});
 
 	private final UserList userList = new UserList();

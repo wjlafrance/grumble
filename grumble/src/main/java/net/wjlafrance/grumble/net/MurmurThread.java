@@ -25,6 +25,17 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 		void receivedMessage(Message message);
 	}
 
+	public static interface UdpCallback {
+		void receivedPacket(UDPPacket packetType, int session, int sequence);
+	}
+
+	public enum UDPPacket {
+		CELTAlpha,
+		Ping,
+		Speex,
+		CELTBeta
+	}
+
 	private enum State {
 		Disconnected,
 		Connecting,
@@ -35,6 +46,7 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 	private final int port;
 	private final String username;
 	private final MessageCallback callback;
+	private final UdpCallback udpCallback;
 
 	private final Thread pingThread = new Thread(() -> {
 		while (getConnectionState() == State.Connected) {
@@ -141,22 +153,14 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 
 		int type = packet[0] >> 5 & 0x07;
 //		int target = packet[0] & 0x1F;
-		long session = NetUtils.readVarint(packetInputStream);
-		long sequence = NetUtils.readVarint(packetInputStream);
+		int session = NetUtils.readVarint(packetInputStream);
+		int sequence = NetUtils.readVarint(packetInputStream);
 
 		switch (type) {
-			case 0:
-				log.debug("Received CELT alpha encoded voice data, session {}, sequence {}", session, sequence);
-				break;
-			case 1:
-				log.info("Received UDP ping");
-				break;
-			case 2:
-				log.debug("Received Speex encoded voice data, session {}, sequence {}", session, sequence);
-				break;
-			case 3:
-				log.debug("Received CELT beta encoded voice data, session {}, sequence {}", session, sequence);
-				break;
+			case 0: udpCallback.receivedPacket(UDPPacket.CELTAlpha, session, sequence); break;
+			case 1: udpCallback.receivedPacket(UDPPacket.Ping, 0, 0); break;
+			case 2: udpCallback.receivedPacket(UDPPacket.Speex, session, sequence); break;
+			case 3: udpCallback.receivedPacket(UDPPacket.CELTBeta, session, sequence); break;
 			default:
 				log.warn("Received unrecognized UDP packet type: {}", type);
 				break;

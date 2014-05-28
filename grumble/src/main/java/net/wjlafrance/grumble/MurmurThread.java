@@ -18,35 +18,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-	/*
-	private static void debugOutput(byte[] bytes) {
-		for (int i = 0; i < bytes.length; i += 16) {
-			for (int j = i; j < (i + 16); j++) {
-				if (j < bytes.length) {
-					System.out.format("%02x ", bytes[j]);
-				} else {
-					System.out.print("   ");
-				}
-			}
-			System.out.print("   ");
-			for (int j = i; j < (i + 16); j++) {
-				if (j < bytes.length) {
-					char c = (char) bytes[j];
-					if (Character.isAlphabetic(c) || Character.isDigit(c)) {
-						System.out.format("%s", Character.valueOf(c).toString());
-					} else {
-						System.out.print(".");
-					}
-				} else {
-					System.out.print(" ");
-				}
-			}
-			System.out.println();
-		}
-		System.out.println();
-	}
-	*/
-
 public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 
 	public static interface MessageCallback {

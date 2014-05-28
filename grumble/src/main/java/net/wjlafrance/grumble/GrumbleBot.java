@@ -82,7 +82,7 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onPing(Ping message) {
-		log.debug("Ping received: {} good, {} late, {} lost, {} resync, {} tcp, {} udp, {} udp avg, {} udp var, {} tcp avg, {} tcp var\n",
+		log.debug("Ping received: {} good, {} late, {} lost, {} resync, {} tcp, {} udp, {} udp avg, {} udp var, {} tcp avg, {} tcp var",
 				message.getGood(), message.getLate(), message.getLost(), message.getResync(), message.getUdpPackets(),
 				message.getTcpPackets(), message.getUdpPingAvg(), message.getUdpPingVar(), message.getTcpPingAvg(),
 				message.getTcpPingVar());

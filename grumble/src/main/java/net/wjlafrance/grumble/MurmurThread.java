@@ -38,18 +38,18 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 	private final Thread pingThread = new Thread(() -> {
 		while (getConnectionState() == State.Connected) {
 			try {
-				sendMessage(Mumble.Ping.newBuilder().build());
+				Thread.sleep(15000);
+			} catch (InterruptedException ex) {
+				log.warn("Caught InterruptedException while sleeping in pingThread. Resuming immediately.", ex);
+			}
+
+			try {
+				sendMessage(Mumble.Ping.newBuilder().setTimestamp(System.currentTimeMillis()).build());
 				log.debug("Sent ping");
 			} catch (IOException ex) {
 				log.error("IOException while sending ping! Disconnecting.", ex);
 				disconnect();
 				return;
-			}
-
-			try {
-				Thread.sleep(15000);
-			} catch (InterruptedException ex) {
-				log.warn("Caught InterruptedException while sleeping in pingThread. Resuming immediately.", ex);
 			}
 		}
 	});

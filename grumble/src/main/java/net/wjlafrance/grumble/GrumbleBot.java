@@ -17,6 +17,8 @@ public @Slf4j class GrumbleBot {
 
 	private final MurmurThread connection;
 
+	private final UserList userList = new UserList();
+
 	public GrumbleBot() {
 		this.connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
 			if (message instanceof Version) {
@@ -72,11 +74,16 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onUserState(UserState message) {
-		User user = new User();
-		user.setSessionId(message.getSession());
-		user.setId(message.getUserId());
-		user.setName(message.getName());
-		user.setChannelId(message.getChannelId());
+		User user = userList.getUserForSession(message.getSession());
+		if (message.hasUserId()) {
+			user.setId(message.getUserId());
+		}
+		if (message.hasName()) {
+			user.setName(message.getName());
+		}
+		if (message.hasChannelId()) {
+			user.setChannelId(message.getChannelId());
+		}
 
 		log.info("User state: {}", user.toString());
 	}

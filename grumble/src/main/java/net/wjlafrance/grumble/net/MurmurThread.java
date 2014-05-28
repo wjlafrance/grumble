@@ -1,8 +1,10 @@
 package net.wjlafrance.grumble.net;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
@@ -134,24 +136,27 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 		}
 	}
 
-	private void receiveUdpPacket(byte[] packet) {
-//		log.debug("Received UDP packet ({} bytes)", packet.length);
+	private void receiveUdpPacket(byte[] packet) throws IOException {
+		ByteArrayInputStream packetInputStream = new ByteArrayInputStream(packet);
+		packetInputStream.skip(1);
 
 		int type = packet[0] >> 5 & 0x07;
 //		int target = packet[0] & 0x1F;
+		long session = NetUtils.readVarint(packetInputStream);
+		long sequence = NetUtils.readVarint(packetInputStream);
 
 		switch (type) {
 			case 0:
-				log.debug("Received CELT alpha encoded voice data");
+				log.debug("Received CELT alpha encoded voice data, session {}, sequence {}", session, sequence);
 				break;
 			case 1:
 				log.info("Received UDP ping");
 				break;
 			case 2:
-				log.debug("Received Speex encoded voice data");
+				log.debug("Received Speex encoded voice data, session {}, sequence {}", session, sequence);
 				break;
 			case 3:
-				log.debug("Received CELT beta encoded voice data");
+				log.debug("Received CELT beta encoded voice data, session {}, sequence {}", session, sequence);
 				break;
 			default:
 				log.warn("Received unrecognized UDP packet type: {}", type);

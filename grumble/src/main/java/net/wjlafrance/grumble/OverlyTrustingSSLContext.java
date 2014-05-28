@@ -15,28 +15,23 @@ import lombok.NoArgsConstructor;
 public @NoArgsConstructor(access = AccessLevel.PRIVATE) class OverlyTrustingSSLContext {
 
 	/**
-	 * This is a really bad idea.
+	 * Get a SSLContext that uses a custom X509TrustManager implementation that will trust any SSL certificate.
 	 *
-	 * @return Something terrible.
-	 * @throws NoSuchAlgorithmException
+	 * Note, this is an incredibly bad idea from a security standpoint.
+	 *
+	 * @return An SSLContext that trusts all certificates
+	 * @throws NoSuchAlgorithmException If the system's SSLContext doesn't know what SSL is
 	 * @throws KeyManagementException
 	 */
 	public static SSLContext getInstance() throws NoSuchAlgorithmException, KeyManagementException {
+		TrustManager nopTrustManager = new X509TrustManager() {
+			@Override public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException { /* nop */ }
+			@Override public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException { /* nop */ }
+			@Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+		};
+
 		SSLContext sslContext = SSLContext.getInstance("SSL");
-		sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-			@Override public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-				/* nop */
-			}
-
-			@Override public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-				/* nop */
-			}
-
-			@Override
-			public X509Certificate[] getAcceptedIssuers() {
-				return new X509Certificate[0];
-			}
-		}}, new SecureRandom());
+		sslContext.init(null, new TrustManager[] { nopTrustManager }, new SecureRandom());
 		return sslContext;
 	}
 

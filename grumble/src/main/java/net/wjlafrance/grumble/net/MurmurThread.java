@@ -123,15 +123,39 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 		);
 
 		if (1 == type) { // UDP packet
-			log.debug("Received UDP packet ({} bytes)", length);
-			return;
+			receiveUdpPacket(data);
+		} else {
+			try {
+				Message message = messageTypes.get(type).getParserForType().parseFrom(data);
+				callback.receivedMessage(message);
+			} catch (InvalidProtocolBufferException ex) {
+				log.warn("Invalid protocol buffer message received. Ignoring it.", ex);
+			}
 		}
+	}
 
-		try {
-			Message message = messageTypes.get(type).getParserForType().parseFrom(data);
-			callback.receivedMessage(message);
-		} catch (InvalidProtocolBufferException ex) {
-			log.warn("Invalid protocol buffer message received. Ignoring it.", ex);
+	private void receiveUdpPacket(byte[] packet) {
+//		log.debug("Received UDP packet ({} bytes)", packet.length);
+
+		int type = packet[0] >> 5 & 0x07;
+//		int target = packet[0] & 0x1F;
+
+		switch (type) {
+			case 0:
+				log.debug("Received CELT alpha encoded voice data");
+				break;
+			case 1:
+				log.info("Received UDP ping");
+				break;
+			case 2:
+				log.debug("Received Speex encoded voice data");
+				break;
+			case 3:
+				log.debug("Received CELT beta encoded voice data");
+				break;
+			default:
+				log.warn("Received unrecognized UDP packet type: {}", type);
+				break;
 		}
 	}
 

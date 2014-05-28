@@ -26,6 +26,7 @@
 		<lombok.version>1.12.6</lombok.version>
 		<guava.version>17.0</guava.version>
 		<slf4j.version>1.7.7</slf4j.version>
+		<spring-framework.version>4.0.5.RELEASE</spring-framework.version>
 	</properties>
 
 	<dependencies>
@@ -65,6 +66,11 @@
 			<artifactId>slf4j-api</artifactId>
 			<version>${slf4j.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring-framework.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -103,7 +109,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib</classpathPrefix>
-							<mainClass>net.wjlafrance.grumble.GrumbleBot</mainClass>
+							<mainClass>net.wjlafrance.grumble.GrumbleMain</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

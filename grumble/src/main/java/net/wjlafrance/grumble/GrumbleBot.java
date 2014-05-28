@@ -15,57 +15,67 @@ import MumbleProto.Mumble.ServerSync;
 import MumbleProto.Mumble.TextMessage;
 import MumbleProto.Mumble.UserState;
 import MumbleProto.Mumble.Version;
+import MumbleProto.Mumble.PermissionDenied;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 public @Slf4j class GrumbleBot {
 
-	private static final String HOSTNAME = "aegiscompany.net";
-	private static final int PORT = 64738;
-	private static final String USERNAME = "GrumbleBot";
+	private @Getter @Setter String hostname;
+	private @Getter @Setter int port;
+	private @Getter @Setter String username;
+	private @Getter @Setter String password;
 
 	private final UserList userList = new UserList();
 	private final ChannelList channelList = new ChannelList();
 
-	private final MurmurThread connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
-		if (message instanceof Version) {
-			onVersion((Version) message);
-		} else if (message instanceof CodecVersion) {
-			onCodecVersion((CodecVersion) message);
-		} else if (message instanceof ChannelState) {
-			onChannelState((ChannelState) message);
-		} else if (message instanceof UserState) {
-			onUserState((UserState) message);
-		} else if (message instanceof Ping) {
-			onPing((Ping) message);
-		} else if (message instanceof TextMessage) {
-			onTextMessage((TextMessage) message);
-		} else if (message instanceof ServerSync) {
-			onServerSync((ServerSync) message);
-		} else if (message instanceof PermissionDenied) {
-			onPermissionDenied((PermissionDenied) message);
-		} else {
-			log.warn("Received unexpected message from server: {}", message.getClass());
-		}
-	}, (packet, session, sequence, data) -> {
-		switch (packet) {
-			case CELTAlpha:
-				log.debug("Received CELT alpha encoded voice data, user {}, sequence {}, {} bytes",
-						userList.getUserForSession(session).getName(), sequence, data.available());
-				break;
-			case Ping:
-				break;
-			case Speex:
-				log.debug("Received Speex encoded voice data, user {}, sequence {}, {} bytes",
-						userList.getUserForSession(session).getName(), sequence, data.available());
-				break;
-			case CELTBeta:
-				log.debug("Received CELT beta encoded voice data, user {}, sequence {}, {} bytes",
-						userList.getUserForSession(session).getName(), sequence, data.available());
-				break;
-		}
-	});
+	private MurmurThread connection;
 
-	public GrumbleBot() {
+	public void start() {
+		this.connection = new MurmurThread(hostname, port, username, password);
+
+		this.connection.setCallback((message) -> {
+			if (message instanceof Version) {
+				onVersion((Version) message);
+			} else if (message instanceof CodecVersion) {
+				onCodecVersion((CodecVersion) message);
+			} else if (message instanceof ChannelState) {
+				onChannelState((ChannelState) message);
+			} else if (message instanceof UserState) {
+				onUserState((UserState) message);
+			} else if (message instanceof Ping) {
+				onPing((Ping) message);
+			} else if (message instanceof TextMessage) {
+				onTextMessage((TextMessage) message);
+			} else if (message instanceof ServerSync) {
+				onServerSync((ServerSync) message);
+			} else if (message instanceof PermissionDenied) {
+				onPermissionDenied((PermissionDenied) message);
+			} else {
+				log.warn("Received unexpected message from server: {}", message.getClass());
+			}
+		});
+
+		this.connection.setUdpCallback((packet, session, sequence, data) -> {
+			switch (packet) {
+				case CELTAlpha:
+					log.debug("Received CELT alpha encoded voice data, user {}, sequence {}, {} bytes",
+							userList.getUserForSession(session).getName(), sequence, data.available());
+					break;
+				case Ping:
+					break;
+				case Speex:
+					log.debug("Received Speex encoded voice data, user {}, sequence {}, {} bytes",
+							userList.getUserForSession(session).getName(), sequence, data.available());
+					break;
+				case CELTBeta:
+					log.debug("Received CELT beta encoded voice data, user {}, sequence {}, {} bytes",
+							userList.getUserForSession(session).getName(), sequence, data.available());
+					break;
+			}
+		});
+
 		this.connection.start();
 	}
 
@@ -136,10 +146,6 @@ public @Slf4j class GrumbleBot {
 
 	private void onPermissionDenied(PermissionDenied message) {
 		log.warn("Permission denied: {}, {}, {}", message.getPermission(), message.getType(), message.getReason());
-	}
-
-	public static void main(String args[]) {
-		new GrumbleBot();
 	}
 
 }

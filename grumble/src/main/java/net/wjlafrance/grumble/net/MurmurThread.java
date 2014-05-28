@@ -20,6 +20,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
@@ -48,8 +49,9 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 	private final String hostname;
 	private final int port;
 	private final String username;
-	private final MessageCallback callback;
-	private final UdpCallback udpCallback;
+	private final String password;
+	private @Setter @Getter MessageCallback callback;
+	private @Setter @Getter UdpCallback udpCallback;
 
 	private final Thread pingThread = new Thread(() -> {
 		while (getConnectionState() == State.Connected) {
@@ -193,7 +195,7 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 
 			sendMessage(Mumble.Version.newBuilder().setVersion(1).setRelease("Grumble 1.0.0-SNAPSHOT").build());
 
-			sendMessage(Mumble.Authenticate.newBuilder().setUsername(this.username).build());
+			sendMessage(Mumble.Authenticate.newBuilder().setUsername(this.username).setPassword(this.password).build());
 
 			this.connectionState = State.Connected;
 			pingThread.start();

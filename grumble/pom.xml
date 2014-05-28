@@ -25,6 +25,7 @@
 		<junit.version>4.6</junit.version>
 		<lombok.version>1.12.6</lombok.version>
 		<guava.version>17.0</guava.version>
+		<slf4j.version>1.7.7</slf4j.version>
 	</properties>
 
 	<dependencies>
@@ -53,6 +54,16 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>${guava.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
 		</dependency>
 	</dependencies>
 

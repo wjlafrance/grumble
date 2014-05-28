@@ -14,7 +14,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 	/*
 	private static void debugOutput(byte[] bytes) {
@@ -45,7 +47,7 @@ import lombok.RequiredArgsConstructor;
 	}
 	*/
 
-public @RequiredArgsConstructor class MurmurThread extends Thread {
+public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 
 	public static interface MessageCallback {
 		void receivedMessage(Message message);
@@ -62,28 +64,47 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 	private final String username;
 	private final MessageCallback callback;
 
-	private State connectionState = State.Disconnected;
-
-	private Thread pingThread = new Thread(() -> {
-		while (connectionState == State.Connected) {
+	private final Thread pingThread = new Thread(() -> {
+		while (getConnectionState() == State.Connected) {
 			try {
 				sendMessage(Mumble.Ping.newBuilder().build());
-				System.out.println("Sent ping.");
+				log.debug("Sent ping");
 			} catch (IOException ex) {
-				ex.printStackTrace();
-				connectionState = State.Disconnected;
+				log.error("IOException while sending ping! Disconnecting.", ex);
+				disconnect();
 				return;
 			}
+
 			try {
 				Thread.sleep(15000);
 			} catch (InterruptedException ex) {
-				ex.printStackTrace();
+				log.warn("Caught InterruptedException while sleeping in pingThread. Resuming immediately.", ex);
 			}
 		}
 	});
 
+	private @Getter State connectionState = State.Disconnected;
+
+	private Socket socket;
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
+
+	public void disconnect() {
+		try {
+			if (null != socket) {
+				socket.close();
+			}
+			if (null != outputStream) {
+				outputStream.close();
+			}
+			if (null != inputStream) {
+				inputStream.close();
+			}
+		} catch (IOException ex) {
+			log.error("Caught IOException while closing socket and streams!", ex);
+		}
+		this.connectionState = State.Disconnected;
+	}
 
 	public void sendMessage(GeneratedMessage message) throws IOException {
 		outputStream.writeShort(message.getDescriptorForType().getIndex());
@@ -131,7 +152,7 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 		);
 
 		if (1 == type) { // UDP packet
-//			System.out.format("Received UDP packet (%d bytes)\n", length);
+			log.debug("Received UDP packet ({} bytes)", length);
 			return;
 		}
 
@@ -139,7 +160,7 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 			Message message = messageTypes.get(type).getParserForType().parseFrom(data);
 			callback.receivedMessage(message);
 		} catch (InvalidProtocolBufferException ex) {
-			ex.printStackTrace();
+			log.warn("Invalid protocol buffer message received. Ignoring it.", ex);
 		}
 	}
 
@@ -147,24 +168,23 @@ public @RequiredArgsConstructor class MurmurThread extends Thread {
 		try {
 			this.connectionState = State.Connecting;
 			SocketFactory socketFactory = OverlyTrustingSSLContext.getInstance().getSocketFactory();
-			try (Socket socket = socketFactory.createSocket(InetAddress.getByName(this.hostname), this.port)) {
-				this.inputStream = new DataInputStream(socket.getInputStream());
-				this.outputStream = new DataOutputStream(socket.getOutputStream());
+			this.socket = socketFactory.createSocket(InetAddress.getByName(this.hostname), this.port);
+			this.inputStream = new DataInputStream(socket.getInputStream());
+			this.outputStream = new DataOutputStream(socket.getOutputStream());
 
-				sendMessage(Mumble.Version.newBuilder().setVersion(1).setRelease("Grumble 1.0.0-SNAPSHOT").build());
+			sendMessage(Mumble.Version.newBuilder().setVersion(1).setRelease("Grumble 1.0.0-SNAPSHOT").build());
 
-				sendMessage(Mumble.Authenticate.newBuilder().setUsername(this.username).build());
+			sendMessage(Mumble.Authenticate.newBuilder().setUsername(this.username).build());
 
-				this.connectionState = State.Connected;
-				pingThread.start();
+			this.connectionState = State.Connected;
+			pingThread.start();
 
-				while (this.connectionState == State.Connected) {
-					receiveMessage(this.callback);
-				}
+			while (this.connectionState == State.Connected) {
+				receiveMessage(this.callback);
 			}
 		} catch (NoSuchAlgorithmException | KeyManagementException | IOException ex) {
-			ex.printStackTrace();
-			connectionState = State.Disconnected;
+			log.error("Caught exception in MurmurThread loop.", ex);
+			disconnect();
 		}
 	}
 

@@ -1,5 +1,7 @@
 package net.wjlafrance.grumble;
 
+import java.util.stream.Collectors;
+
 import net.wjlafrance.grumble.data.Channel;
 import net.wjlafrance.grumble.data.ChannelList;
 import net.wjlafrance.grumble.data.User;
@@ -21,6 +23,9 @@ public @Slf4j class GrumbleBot {
 	private static final int PORT = 64738;
 	private static final String USERNAME = "GrumbleBot";
 
+	private final UserList userList = new UserList();
+	private final ChannelList channelList = new ChannelList();
+
 	private final MurmurThread connection = new MurmurThread(HOSTNAME, PORT, USERNAME, (message) -> {
 		if (message instanceof Version) {
 			onVersion((Version) message);
@@ -39,24 +44,24 @@ public @Slf4j class GrumbleBot {
 		} else {
 			log.warn("Received unexpected message from server: {}", message.getClass());
 		}
-	}, (packet, session, sequence) -> {
+	}, (packet, session, sequence, data) -> {
 		switch (packet) {
 			case CELTAlpha:
-				log.debug("Received CELT alpha encoded voice data, session {}, sequence {}", session, sequence);
+				log.debug("Received CELT alpha encoded voice data, user {}, sequence {}, {} bytes",
+						userList.getUserForSession(session).getName(), sequence, data.available());
 				break;
 			case Ping:
 				break;
 			case Speex:
-				log.debug("Received Speex encoded voice data, session {}, sequence {}", session, sequence);
+				log.debug("Received Speex encoded voice data, user {}, sequence {}, {} bytes",
+						userList.getUserForSession(session).getName(), sequence, data.available());
 				break;
 			case CELTBeta:
-				log.debug("Received CELT beta encoded voice data, session {}, sequence {}", session, sequence);
+				log.debug("Received CELT beta encoded voice data, user {}, sequence {}, {} bytes",
+						userList.getUserForSession(session).getName(), sequence, data.available());
 				break;
 		}
 	});
-
-	private final UserList userList = new UserList();
-	private final ChannelList channelList = new ChannelList();
 
 	public GrumbleBot() {
 		this.connection.start();
@@ -117,8 +122,10 @@ public @Slf4j class GrumbleBot {
 	}
 
 	private void onTextMessage(TextMessage message) {
-		log.info("TextMessage: Actor {} to sessions {}, channels {}:\n{}", message.getActor(), message.getSessionList(),
-				message.getChannelIdList(), message.getMessage());
+		log.info("TextMessage: [{} to users {}, channels {}]: {}", userList.getUserForSession(message.getActor()),
+				message.getSessionList().stream().map(id -> userList.getUserForSession(id).getName()).collect(Collectors.joining(", ")),
+				message.getChannelIdList().stream().map(id -> channelList.getChannelForId(id).getName()).collect(Collectors.joining(", ")),
+				message.getMessage());
 	}
 
 	private void onServerSync(ServerSync message) {

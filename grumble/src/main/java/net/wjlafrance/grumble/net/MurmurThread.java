@@ -4,6 +4,9 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
@@ -26,7 +29,7 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 	}
 
 	public static interface UdpCallback {
-		void receivedPacket(UDPPacket packetType, int session, int sequence);
+		void receivedPacket(UDPPacket packetType, int session, int sequence, InputStream data) throws IOException;
 	}
 
 	public enum UDPPacket {
@@ -156,11 +159,24 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 		int session = NetUtils.readVarint(packetInputStream);
 		int sequence = NetUtils.readVarint(packetInputStream);
 
+		PipedOutputStream dataOutputPipe = new PipedOutputStream();
+		PipedInputStream dataInputPipe = new PipedInputStream(dataOutputPipe);
+		if (0 == type || 2 == type || 3 == type) {
+			int dataHeader;
+			do {
+				dataHeader = packetInputStream.read();
+				int dataLength = dataHeader & 0x7F;
+				byte[] dataChunk = new byte[dataLength];
+				packetInputStream.read(dataChunk, 0, dataLength);
+				dataOutputPipe.write(dataChunk);
+			} while ((dataHeader >> 7) == 1); // terminator bit is set for all but last packet
+		}
+
 		switch (type) {
-			case 0: udpCallback.receivedPacket(UDPPacket.CELTAlpha, session, sequence); break;
-			case 1: udpCallback.receivedPacket(UDPPacket.Ping, 0, 0); break;
-			case 2: udpCallback.receivedPacket(UDPPacket.Speex, session, sequence); break;
-			case 3: udpCallback.receivedPacket(UDPPacket.CELTBeta, session, sequence); break;
+			case 0: udpCallback.receivedPacket(UDPPacket.CELTAlpha, session, sequence, dataInputPipe); break;
+			case 1: udpCallback.receivedPacket(UDPPacket.Ping, 0, 0, dataInputPipe); break;
+			case 2: udpCallback.receivedPacket(UDPPacket.Speex, session, sequence, dataInputPipe); break;
+			case 3: udpCallback.receivedPacket(UDPPacket.CELTBeta, session, sequence, dataInputPipe); break;
 			default:
 				log.warn("Received unrecognized UDP packet type: {}", type);
 				break;

@@ -2,6 +2,7 @@ package net.wjlafrance.grumble.data;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class ChannelList {
 
@@ -13,6 +14,10 @@ public class ChannelList {
 			newChannel.setId(newId);
 			return newChannel;
 		});
+	}
+
+	public Optional<Channel> getChannelForName(String name) {
+		return channels.values().stream().filter(channel -> name.equals(channel.getName())).findAny();
 	}
 
 	public void deleteChannel(int id) {

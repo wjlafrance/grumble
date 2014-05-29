@@ -2,3 +2,5 @@ hostname=
 port=
 auth.username=
 auth.password=
+commands.master=
+commands.trigger=!

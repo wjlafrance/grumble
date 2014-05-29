@@ -10,6 +10,25 @@
 		<property name="port" value="${port}" />
 		<property name="username" value="${auth.username}" />
 		<property name="password" value="${auth.password}" />
+		<property name="userList" ref="userList" />
+		<property name="channelList" ref="channelList" />
+		<property name="commands" ref="commandRegistry" />
+	</bean>
+
+	<bean id="userList" class="net.wjlafrance.grumble.data.UserList" scope="singleton" />
+
+	<bean id="channelList" class="net.wjlafrance.grumble.data.ChannelList" scope="singleton" />
+
+	<bean id="commandRegistry" class="net.wjlafrance.grumble.commands.CommandRegistry">
+		<property name="master" value="${commands.master}" />
+		<property name="trigger" value="${commands.trigger}" />
+		<property name="commands">
+			<list>
+				<bean class="net.wjlafrance.grumble.commands.SayCommand">
+					<property name="channelList" ref="channelList" />
+				</bean>
+			</list>
+		</property>
 	</bean>
 
 	<context:property-placeholder location="classpath:config.properties" />

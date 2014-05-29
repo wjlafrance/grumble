@@ -2,6 +2,7 @@ package net.wjlafrance.grumble;
 
 import java.util.stream.Collectors;
 
+import net.wjlafrance.grumble.commands.CommandRegistry;
 import net.wjlafrance.grumble.data.Channel;
 import net.wjlafrance.grumble.data.ChannelList;
 import net.wjlafrance.grumble.data.User;
@@ -27,8 +28,10 @@ public @Slf4j class GrumbleBot {
 	private @Getter @Setter String username;
 	private @Getter @Setter String password;
 
-	private final UserList userList = new UserList();
-	private final ChannelList channelList = new ChannelList();
+	private @Getter @Setter UserList userList;
+	private @Getter @Setter ChannelList channelList;
+
+	private @Getter @Setter CommandRegistry commands;
 
 	private MurmurThread connection;
 
@@ -124,6 +127,10 @@ public @Slf4j class GrumbleBot {
 		}
 
 		log.info("User state: {}", user);
+
+		if (this.username.equals(user.getName())) {
+			this.channelList.setCurrentChannel(channelList.getChannelForId(message.getChannelId()));
+		}
 	}
 
 	private void onPing(Ping message) {
@@ -138,6 +145,8 @@ public @Slf4j class GrumbleBot {
 				message.getSessionList().stream().map(id -> userList.getUserForSession(id).getName()).collect(Collectors.joining(", ")),
 				message.getChannelIdList().stream().map(id -> channelList.getChannelForId(id).getName()).collect(Collectors.joining(", ")),
 				message.getMessage());
+
+		commands.onTextMessage(userList.getUserForSession(message.getActor()), message.getMessage(), this.connection);
 	}
 
 	private void onServerSync(ServerSync message) {

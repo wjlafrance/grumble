@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
+public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread implements MessageSender {
 
 	public static interface MessageCallback {
 		void receivedMessage(Message message);
@@ -61,14 +61,8 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 				log.warn("Caught InterruptedException while sleeping in pingThread. Resuming immediately.", ex);
 			}
 
-			try {
-				sendMessage(Mumble.Ping.newBuilder().setTimestamp(System.currentTimeMillis()).build());
-				log.debug("Sent ping");
-			} catch (IOException ex) {
-				log.error("IOException while sending ping! Disconnecting.", ex);
-				disconnect();
-				return;
-			}
+			sendMessage(Mumble.Ping.newBuilder().setTimestamp(System.currentTimeMillis()).build());
+			log.debug("Sent ping");
 		}
 	});
 
@@ -95,10 +89,14 @@ public @RequiredArgsConstructor @Slf4j class MurmurThread extends Thread {
 		this.connectionState = State.Disconnected;
 	}
 
-	public void sendMessage(GeneratedMessage message) throws IOException {
-		outputStream.writeShort(message.getDescriptorForType().getIndex());
-		outputStream.writeInt(message.getSerializedSize());
-		message.writeTo(outputStream);
+	@Override public void sendMessage(Message message) {
+		try {
+			outputStream.writeShort(message.getDescriptorForType().getIndex());
+			outputStream.writeInt(message.getSerializedSize());
+			message.writeTo(outputStream);
+		} catch (IOException ex) {
+			log.error("Caught IOException while trying to send message!", ex);
+		}
 	}
 
 	private void receiveMessage(MessageCallback callback) throws IOException {

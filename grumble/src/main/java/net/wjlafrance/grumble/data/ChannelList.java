@@ -4,7 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class ChannelList {
+
+	public @Getter @Setter Channel currentChannel;
 
 	private Map<Integer, Channel> channels = new HashMap<>();
 
